@@ -6,21 +6,29 @@ import (
 	"sync"
 
 	natsHelper "github.com/punk-link/streaming-platform-runtime/nats"
+	"go.opentelemetry.io/otel/metric/global"
+	"go.opentelemetry.io/otel/metric/instrument/syncint64"
 
 	"github.com/nats-io/nats.go"
 	"github.com/punk-link/logger"
 	contracts "github.com/punk-link/platform-contracts"
+	runtime "github.com/punk-link/streaming-platform-runtime"
 )
 
 type QueueProcessingService struct {
 	logger         logger.Logger
 	natsConnection *nats.Conn
+	urlsInProcess  syncint64.UpDownCounter
 }
 
-func New(logger logger.Logger, natsConnection *nats.Conn) *QueueProcessingService {
+func New(options *runtime.ServiceOptions, natsConnection *nats.Conn) *QueueProcessingService {
+	meter := global.MeterProvider().Meter(options.ServiceName)
+	urlsInProcess, _ := meter.SyncInt64().UpDownCounter("release_urls_in_process")
+
 	return &QueueProcessingService{
-		logger:         logger,
+		logger:         options.Logger,
 		natsConnection: natsConnection,
+		urlsInProcess:  urlsInProcess,
 	}
 }
 
@@ -42,22 +50,22 @@ func (t *QueueProcessingService) Process(ctx context.Context, wg *sync.WaitGroup
 			messages, _ := subscription.Fetch(platformer.GetBatchSize())
 			containers := make([]contracts.UpcContainer, len(messages))
 			for i, message := range messages {
-				message.Ack()
-
 				var container contracts.UpcContainer
 				_ = json.Unmarshal(message.Data, &container)
 
 				containers[i] = container
+				message.Ack()
 			}
 
+			t.urlsInProcess.Add(ctx, int64(len(containers)))
 			urlResults := platformer.GetReleaseUrlsByUpc(containers)
 			err = natsHelper.CreateJstStreamIfNotExist(nil, t.logger, jetStreamContext)
-			_ = t.publishUrlResults(err, jetStreamContext, urlResults)
+			_ = t.publishUrlResults(err, ctx, jetStreamContext, urlResults)
 		}
 	}
 }
 
-func (t *QueueProcessingService) publishUrlResults(err error, jetStreamContext nats.JetStreamContext, urlResults []contracts.UrlResultContainer) error {
+func (t *QueueProcessingService) publishUrlResults(err error, ctx context.Context, jetStreamContext nats.JetStreamContext, urlResults []contracts.UrlResultContainer) error {
 	if err != nil {
 		return err
 	}
@@ -66,6 +74,8 @@ func (t *QueueProcessingService) publishUrlResults(err error, jetStreamContext n
 		json, _ := json.Marshal(urlResult)
 		jetStreamContext.Publish(contracts.PLATFORM_URL_RESPONSE_STREAM_SUBJECT, json)
 	}
+
+	t.urlsInProcess.Add(ctx, -int64(len(urlResults)))
 
 	return err
 }

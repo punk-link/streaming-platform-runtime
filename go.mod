@@ -3,8 +3,10 @@ module github.com/punk-link/streaming-platform-runtime
 go 1.19
 
 require (
+	github.com/getsentry/sentry-go v0.15.0
 	github.com/gin-gonic/gin v1.8.1
 	github.com/nats-io/nats.go v1.20.0
+	github.com/prometheus/client_golang v1.13.0
 	github.com/punk-link/consul-client v1.0.2
 	github.com/punk-link/environment-variable-manager v1.0.0
 	github.com/punk-link/logger v1.0.4
@@ -28,8 +30,8 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect
-	github.com/go-playground/validator/v10 v10.10.0 // indirect
-	github.com/goccy/go-json v0.9.7 // indirect
+	github.com/go-playground/validator/v10 v10.11.1 // indirect
+	github.com/goccy/go-json v0.9.11 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/hashicorp/consul/api v1.15.2 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
@@ -52,9 +54,8 @@ require (
 	github.com/nats-io/jwt/v2 v2.3.0 // indirect
 	github.com/nats-io/nkeys v0.3.0 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
-	github.com/pelletier/go-toml/v2 v2.0.1 // indirect
+	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/prometheus/client_golang v1.13.0 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect

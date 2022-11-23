@@ -10,7 +10,7 @@ import (
 	"github.com/punk-link/streaming-platform-runtime/constants"
 )
 
-func GetConsulClient(logger logger.Logger, storageName string, environmentName string) *consulClient.ConsulClient {
+func GetConsulClient(logger logger.Logger, environmentName string, serviceName string) *consulClient.ConsulClient {
 	isExist, consulAddress := envManager.TryGetEnvironmentVariable(constants.CONSUL_ADDRESS)
 	if !isExist {
 		err := fmt.Errorf("can't find value of the '%s' environment variable", constants.CONSUL_ADDRESS)
@@ -26,7 +26,7 @@ func GetConsulClient(logger logger.Logger, storageName string, environmentName s
 	consul, err := consulClient.New(&consulClient.ConsulConfig{
 		Address:         consulAddress,
 		EnvironmentName: environmentName,
-		StorageName:     storageName,
+		StorageName:     serviceName,
 		Token:           consulToken,
 	})
 	if err != nil {
@@ -53,7 +53,7 @@ func GetNatsConnection(logger logger.Logger, consul *consulClient.ConsulClient) 
 	}
 	natsSettings := natsSettingsValues.(map[string]interface{})
 
-	natsConnection, err := nats.Connect(natsSettings["Url"].(string))
+	natsConnection, err := nats.Connect(natsSettings["Endpoint"].(string))
 	if err != nil {
 		err := fmt.Errorf("can't obtain Nats settings from Consul: '%s'", err.Error())
 		logger.LogFatal(err, err.Error())

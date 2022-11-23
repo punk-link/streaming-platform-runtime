@@ -1,8 +1,8 @@
 package startup
 
 import (
-	consulClient "github.com/punk-link/consul-client"
 	"github.com/punk-link/logger"
+	runtime "github.com/punk-link/streaming-platform-runtime"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/jaeger"
@@ -14,35 +14,35 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.12.0"
 )
 
-func configureOpenTelemetry(logger logger.Logger, consul *consulClient.ConsulClient, options *StartupOptions) {
-	configureTracing(logger, consul, options)
-	configureMetrics(logger)
+func configureOpenTelemetry(options *runtime.ServiceOptions) {
+	configureTracing(options)
+	configureMetrics(options)
 }
 
-func configureMetrics(logger logger.Logger) {
+func configureMetrics(options *runtime.ServiceOptions) {
 	exporter, err := prometheus.New()
-	logOpenTelemetryExceptionIfAny(logger, err)
+	logOpenTelemetryExceptionIfAny(options.Logger, err)
 
 	metricProvider := metricSdk.NewMeterProvider(metricSdk.WithReader(exporter))
 	global.SetMeterProvider(metricProvider)
 }
 
-func configureTracing(logger logger.Logger, consul *consulClient.ConsulClient, options *StartupOptions) {
-	jaegerSettingsValues, err := consul.Get("JaegerSettings")
+func configureTracing(options *runtime.ServiceOptions) {
+	jaegerSettingsValues, err := options.Consul.Get("JaegerSettings")
 	if err != nil {
-		logger.LogInfo("Jaeger settings is empty")
+		options.Logger.LogInfo("Jaeger settings is empty")
 		return
 	}
 
 	jaegerSettings := jaegerSettingsValues.(map[string]any)
 	endpoint := jaegerSettings["Endpoint"].(string)
 	if endpoint == "" {
-		logger.LogInfo("Jaeger endpoint is empty")
+		options.Logger.LogInfo("Jaeger endpoint is empty")
 		return
 	}
 
 	exporter, err := jaeger.New(jaeger.WithCollectorEndpoint(jaeger.WithEndpoint(endpoint)))
-	logOpenTelemetryExceptionIfAny(logger, err)
+	logOpenTelemetryExceptionIfAny(options.Logger, err)
 
 	traceProvider := traceSdk.NewTracerProvider(traceSdk.WithBatcher(exporter), traceSdk.WithResource(resource.NewWithAttributes(
 		semconv.SchemaURL,
