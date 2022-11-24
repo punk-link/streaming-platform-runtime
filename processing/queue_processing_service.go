@@ -16,19 +16,25 @@ import (
 )
 
 type QueueProcessingService struct {
-	logger         logger.Logger
-	natsConnection *nats.Conn
-	urlsInProcess  syncint64.UpDownCounter
+	logger             logger.Logger
+	natsConnection     *nats.Conn
+	urlsInProcess      syncint64.UpDownCounter
+	urlsProcessedTotal syncint64.Counter
+	urlsReceivedTotal  syncint64.Counter
 }
 
 func New(options *runtime.ServiceOptions, natsConnection *nats.Conn) *QueueProcessingService {
 	meter := global.MeterProvider().Meter(options.ServiceName)
 	urlsInProcess, _ := meter.SyncInt64().UpDownCounter("release_urls_in_process")
+	urlsProcessedTotal, _ := meter.SyncInt64().Counter("urls_processed")
+	urlsReceivedTotal, _ := meter.SyncInt64().Counter("urls_received")
 
 	return &QueueProcessingService{
-		logger:         options.Logger,
-		natsConnection: natsConnection,
-		urlsInProcess:  urlsInProcess,
+		logger:             options.Logger,
+		natsConnection:     natsConnection,
+		urlsInProcess:      urlsInProcess,
+		urlsProcessedTotal: urlsProcessedTotal,
+		urlsReceivedTotal:  urlsReceivedTotal,
 	}
 }
 
@@ -58,6 +64,8 @@ func (t *QueueProcessingService) Process(ctx context.Context, wg *sync.WaitGroup
 			}
 
 			t.urlsInProcess.Add(ctx, int64(len(containers)))
+			t.urlsReceivedTotal.Add(ctx, int64(len(containers)))
+
 			urlResults := platformer.GetReleaseUrlsByUpc(containers)
 			err = natsHelper.CreateJstStreamIfNotExist(nil, t.logger, jetStreamContext)
 			_ = t.publishUrlResults(err, ctx, jetStreamContext, urlResults)
@@ -76,6 +84,7 @@ func (t *QueueProcessingService) publishUrlResults(err error, ctx context.Contex
 	}
 
 	t.urlsInProcess.Add(ctx, -int64(len(urlResults)))
+	t.urlsProcessedTotal.Add(ctx, int64(len(urlResults)))
 
 	return err
 }

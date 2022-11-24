@@ -53,7 +53,7 @@ func RunServer(options *runtime.ServiceOptions) {
 	configureOpenTelemetry(options)
 	setupRouts(app)
 
-	err = app.Run()
+	err = app.Run(fmt.Sprintf(":%s", hostSettings["Port"]))
 	if err != nil {
 		options.Logger.LogFatal(err, fmt.Sprintf("Can't run Gin server: %s", err.Error()))
 	}
@@ -69,6 +69,4 @@ func RunServer(options *runtime.ServiceOptions) {
 			options.Logger.LogError(err, "Server listen error: %s\n", err.Error())
 		}
 	}()
-
-	options.Logger.LogInfo("Gin server started")
 }
