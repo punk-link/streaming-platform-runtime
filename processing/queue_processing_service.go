@@ -23,7 +23,7 @@ type QueueProcessingService struct {
 	urlsReceivedTotal  syncint64.Counter
 }
 
-func New(options *runtime.ServiceOptions, natsConnection *nats.Conn) *QueueProcessingService {
+func New(options *runtime.ServiceOptions, natsConnection *nats.Conn) QueueProcessor {
 	meter := global.MeterProvider().Meter(options.ServiceName)
 	urlsInProcess, _ := meter.SyncInt64().UpDownCounter("release_urls_in_process")
 	urlsProcessedTotal, _ := meter.SyncInt64().Counter("urls_processed")

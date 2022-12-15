@@ -10,14 +10,14 @@ import (
 	"github.com/punk-link/streaming-platform-runtime/constants"
 )
 
-func GetConsulClient(logger logger.Logger, environmentName string, serviceName string) *consulClient.ConsulClient {
-	isExist, consulAddress := envManager.TryGetEnvironmentVariable(constants.CONSUL_ADDRESS)
+func GetConsulClient(logger logger.Logger, envManager envManager.EnvironmentVariableManager, environmentName string, serviceName string) consulClient.ConsulClient {
+	consulAddress, isExist := envManager.TryGet(constants.CONSUL_ADDRESS)
 	if !isExist {
 		err := fmt.Errorf("can't find value of the '%s' environment variable", constants.CONSUL_ADDRESS)
 		logger.LogFatal(err, err.Error())
 	}
 
-	isExist, consulToken := envManager.TryGetEnvironmentVariable(constants.CONSUL_TOKEN)
+	consulToken, isExist := envManager.TryGet(constants.CONSUL_TOKEN)
 	if !isExist {
 		err := fmt.Errorf("can't find value of the '%s' environment variable", constants.CONSUL_TOKEN)
 		logger.LogFatal(err, err.Error())
@@ -36,8 +36,8 @@ func GetConsulClient(logger logger.Logger, environmentName string, serviceName s
 	return consul
 }
 
-func GetEnvironmentName() string {
-	isExist, name := envManager.TryGetEnvironmentVariable(constants.GO_ENVIRONMENT)
+func GetEnvironmentName(envManager envManager.EnvironmentVariableManager) string {
+	name, isExist := envManager.TryGet(constants.GO_ENVIRONMENT)
 	if !isExist {
 		return constants.DEFAULT_GO_ENVIRONMENT
 	}
@@ -45,7 +45,7 @@ func GetEnvironmentName() string {
 	return name
 }
 
-func GetNatsConnection(logger logger.Logger, consul *consulClient.ConsulClient) *nats.Conn {
+func GetNatsConnection(logger logger.Logger, consul consulClient.ConsulClient) *nats.Conn {
 	natsSettingsValues, err := consul.Get("NatsSettings")
 	if err != nil {
 		err := fmt.Errorf("can't obtain Nats settings from Consul: '%s'", err.Error())
